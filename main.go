@@ -8,53 +8,51 @@ import (
 )
 
 func splitString(s string) (string, string) {
-	// Find the index of the opening parenthesis
 	openParen := strings.Index(s, "(")
-	if openParen == -1 {
-		return s, ""
+
+	if openParen != -1 {
+		beforeParen := strings.TrimSpace(s[:openParen])
+		afterParen := strings.TrimSpace(s[openParen:]) // Include everything from the "(" onward
+		return beforeParen, afterParen
 	}
-	// Extract the part before the parenthesis
-	beforeParen := strings.TrimSpace(s[:openParen])
-	// Extract the part inside the parenthesis
-	insideParen := strings.TrimSpace(s[openParen+1 : len(s)-1])
-	return beforeParen, insideParen
+
+	return s, ""
 }
 
-func processCSV(fileName string, colIndex int) error {
-	// Open the CSV file
+func processCSV(fileName string) error {
 	file, err := os.Open(fileName)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	// Read the CSV file
 	reader := csv.NewReader(file)
 	records, err := reader.ReadAll()
 	if err != nil {
 		return err
 	}
 
-	// Process each record
-	for i, record := range records {
-		if i == 0 {
-			record = append(record, "SKU", "Product Name")
-			records[i] = record
-			continue
-		}
-		if colIndex >= len(record) {
-			return fmt.Errorf("Column index out of range")
-		}
+	header := records[0]
+	header = append(header, "SKU", "Product Name")
 
-		// Split the content of the column
-		beforeParen, insideParen := splitString(record[colIndex])
-		// Add the split values to the record
-		record = append(record, beforeParen, insideParen)
-		records[i] = record
+	var newRecords [][]string
+	newRecords = append(newRecords, header)
+
+	for _, record := range records[1:] {
+		var sku, productName string
+		for _, colIndex := range []int{4, 5, 6, 7} { // columns E, F, G, H are indexes 4, 5, 6, 7
+			part1, part2 := splitString(record[colIndex])
+			if part2 != "" {
+				sku = part1
+				productName = part2
+				break
+			}
+		}
+		newRecord := append(record, sku, productName)
+		newRecords = append(newRecords, newRecord)
 	}
 
-	// Write the modified records to a new CSV file
-	outputFile, err := os.Create("output.csv")
+	outputFile, err := os.Create("output_modified.csv")
 	if err != nil {
 		return err
 	}
@@ -63,7 +61,7 @@ func processCSV(fileName string, colIndex int) error {
 	writer := csv.NewWriter(outputFile)
 	defer writer.Flush()
 
-	for _, record := range records {
+	for _, record := range newRecords {
 		if err := writer.Write(record); err != nil {
 			return err
 		}
@@ -73,10 +71,8 @@ func processCSV(fileName string, colIndex int) error {
 }
 
 func main() {
-	fileName := "input.csv" //replace with actual name of the csv file
-	colIndex := 0           // Replace with the index of the column you want to process
-
-	if err := processCSV(fileName, colIndex); err != nil {
+	fileName := "QTY8.1-Table 1.csv" // replace with your file name
+	if err := processCSV(fileName); err != nil {
 		fmt.Println("Error:", err)
 	} else {
 		fmt.Println("CSV processing completed successfully.")
