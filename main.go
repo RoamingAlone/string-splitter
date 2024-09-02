@@ -74,7 +74,7 @@ func processCSV(fileName string, colIndex int) error {
 
 func main() {
 	fileName := "input.csv" //replace with actual name of the csv file
-	colIndex := 1           // Replace with the index of the column you want to process
+	colIndex := 0           // Replace with the index of the column you want to process
 
 	if err := processCSV(fileName, colIndex); err != nil {
 		fmt.Println("Error:", err)
